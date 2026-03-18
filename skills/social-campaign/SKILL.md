@@ -65,6 +65,15 @@ Call `aa_generate_media` with the campaignId.
 Poll `aa_check_media_status` every 30 seconds until complete.
 Report progress: "4 of 7 images generated..."
 
+For video posts, the server automatically:
+1. Generates a still image from the imagePrompt
+2. Generates video from the still using Kling AI (image-to-video)
+3. Generates AI music from the musicPrompt
+4. **Composites the video and music together** using FFmpeg into a single MP4 file
+5. Uploads the final composite to media storage
+
+The user will see the complete video with music in the finalize/review step. Videos take 2-3 minutes each due to the multi-step pipeline.
+
 ### Step 8: Schedule
 Ask when they want the campaign to start and how to schedule:
 - **Spread**: One post per day at a set time
