@@ -139,6 +139,8 @@ export const TOOLS = [
               imagePrompts: { type: "array", items: { type: "string" }, description: "For carousels: per-slide prompts" },
               videoPrompt: { type: "string", description: "For video: camera motion description" },
               musicPrompt: { type: "string", description: "For video: music mood description" },
+              videoDuration: { type: "number", enum: [5, 10, 20, 30, 60], description: "Video length in seconds. >10s chains multiple clips via FFmpeg" },
+              includeMusic: { type: "boolean", description: "Include AI-generated music (default true)" },
               contentType: { type: "string", enum: ["image", "carousel", "video"] },
             },
           },
