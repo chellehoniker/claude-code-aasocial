@@ -33,6 +33,11 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install dependencies
+        # bun --compile resolves imports against node_modules; without this
+        # step the SDK packages aren't found and the build fails per-target.
+        run: bun install --frozen-lockfile=false
+
       - name: Cross-compile binaries
         run: |
           set -euo pipefail
