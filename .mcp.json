@@ -3,10 +3,7 @@
     "author-automations": {
       "type": "stdio",
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/dist/index.js"],
-      "env": {
-        "NODE_PATH": "${CLAUDE_PLUGIN_DATA}/node_modules"
-      }
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/dist/index.js"]
     }
   }
 }
