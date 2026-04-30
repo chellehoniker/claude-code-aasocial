@@ -106,13 +106,76 @@ Claude will:
 | `aa_schedule_campaign` | Schedule all campaign posts |
 | `aa_list_campaigns` | View your campaigns |
 
+## What's new — version comparison
+
+The plugin's "skills" are markdown guides Claude reads to handle specific intents. v2.x added platform specialists so prompts like "schedule 8 Trial Reels for next week" or "post to Threads under Book Threads topic" produce the right API calls without you having to know the field names.
+
+### Skills in this version
+
+| Skill | Triggers when you say... | What it does | Added |
+|------|---|---|---|
+| `aa-setup` | "set up author automations", "connect AA Social" | Walks through API key setup; troubleshoots install issues (binary download, Cowork restart, network egress) | v1.0 |
+| `social-post` | "post to instagram", "schedule a tweet", "share on social" | Orchestrator: reads your guides, lists accounts, drafts platform-specific captions, schedules. Delegates to specialists when needed | v1.0 (revamped v2.1) |
+| `social-campaign` | "14-day campaign", "book launch", "content plan" | Plans multi-day campaigns with AI-generated images/video; routes Reel days through `instagram-reels` for Trial Reels and covers | v1.0 (extended v2.1) |
+| **`instagram-reels`** | "trial reel", "post a Reel", "reel cover", "story for IG" | Decision tree for Feed (4:5) vs Story (9:16) vs Reel; supports **Trial Reels** with `MANUAL` or `SS_PERFORMANCE` graduation; cover-image picker (URL / video frame / auto) | **v2.1 NEW** |
+| **`threads-post`** | "post to Threads", "topic tag", "thread chain" | Sets `topicTag` (1–50 chars, no `.`/`&`) for Threads discovery; supports multi-part thread chains | **v2.1 NEW** |
+| **`youtube-video`** | "YouTube video", "schedule a Short", "playlist" | Required title (separate from caption), visibility (public/private/unlisted), made-for-kids and AI-disclosure flags | **v2.1 NEW** |
+| **`reddit-post`** | "Reddit", "r/<subreddit>", "post to subreddit" | Required subreddit + title; self vs link post; flair conventions and AutoMod warnings | **v2.1 NEW** |
+
+### Try it — natural-language prompts that now Just Work
+
+```
+Schedule 4 Trial Reels for my book launch over the next 2 weeks.
+Use auto-graduation and generate covers via Freepik.
+```
+→ `instagram-reels` skill handles `trialParams: { graduationStrategy: "SS_PERFORMANCE" }`, generates 9:16 covers, schedules each post.
+
+```
+Post a Threads update about my novel and file it under Book Threads.
+```
+→ `threads-post` skill validates the topic tag, calls `aa_create_post` with `threadsOptions.topicTag: "Book Threads"`.
+
+```
+Schedule my book trailer to YouTube for Friday at 9am with the title
+"3 Years of Writing — My First Fantasy Novel" and add it to my Author Vlogs playlist.
+```
+→ `youtube-video` skill enforces the title requirement, sets `containsSyntheticMedia: true` if the trailer was AI-generated, routes to the playlist.
+
+```
+Cross-post my launch announcement to r/Fantasy and r/SelfPublishing.
+```
+→ `reddit-post` skill asks about flair (per-subreddit requirement), drafts subreddit-specific titles, schedules each.
+
+### Version history
+
+| Version | What changed |
+|---|---|
+| **2.1.0** | Skills expansion: new `instagram-reels`, `threads-post`, `youtube-video`, `reddit-post` specialists. Updated `social-post` as orchestrator with platform routing |
+| **2.0.0** | **No Node.js required.** MCP server ships as a precompiled per-platform binary (~60MB, downloaded on first session) instead of a JS bundle invoked via `node`. Closes the silent-install-failure conversion blocker for non-technical authors |
+| 1.6.0 | Whitelabel cleanup. Single self-contained JS bundle removed the runtime `npm install` |
+| 1.5.0 | Full per-platform option surface in `aa_create_post` (Trial Reels, Threads topics, YT/Reddit required fields) |
+| 1.4.0 | Internal infrastructure improvements |
+| 1.0.0 | Initial release |
+
 ## Updating
 
-Claude Code handles updates automatically when you re-run the marketplace install. To force a refresh:
+### Claude Cowork (desktop app)
+
+In **Settings → Plugins**, find the `claude-code-author-automations` marketplace. Click the three-dot menu next to it and toggle **Sync automatically** ON — Cowork will pull updates as they're published. To force a check, click **Check for updates** in the same menu.
+
+After Cowork pulls a new version, **fully quit and reopen** (Cmd+Q on Mac, right-click tray icon → Quit on Windows) so the new MCP server attaches and skills reload. Just closing the window isn't enough.
+
+### Claude Code (CLI)
 
 ```
 /plugin update author-automations-social@author-automations
 ```
+
+### When updates aren't appearing
+
+If the **Update** button stays greyed out for more than a day, Cowork's marketplace cache may be stale. From the marketplace settings, remove the marketplace, then re-add it from the GitHub URL. Your installed plugin and config aren't affected.
+
+If `aa_*` tools stop working entirely after an update, look for `${CLAUDE_PLUGIN_ROOT}/mcp-server/.install-error` — if the file exists, it has a fail-loud diagnosis. Most common cause: Cowork's `Settings → Capabilities → Allow Network Egress` got toggled off; turn it back on (set to "All Domains") and restart.
 
 ## Requirements
 
@@ -128,16 +191,26 @@ Claude Code handles updates automatically when you re-run the marketplace instal
 
 ## For developers
 
-Pre-built artifacts live in `mcp-server/dist/` so the plugin works immediately after a marketplace install. To hack on the plugin locally:
+The plugin's MCP server is a TypeScript program in `mcp-server/`. From v2.0 onward, it ships as platform-specific binaries built with `bun --compile` and attached to GitHub Releases (not committed to the repo). The `hooks/install-binary.sh` SessionStart hook downloads the right binary at first session.
+
+To hack locally:
 
 ```
 git clone https://github.com/chellehoniker/claude-code-author-automations
 cd claude-code-author-automations
-npm install
-npm run build
+bun install
+bun run build       # cross-compiles all 4 binaries to ./dist/
 ```
 
-Source lives in `mcp-server/`. Commits that change the server code should re-run `npm run build` and include the updated `dist/`.
+To cut a release:
+
+```
+# Bump version in package.json, plugin.json, marketplace.json (lockstep)
+git tag v2.1.x
+git push --tags
+```
+
+The `.github/workflows/release.yml` workflow runs on tag push, cross-compiles all 4 platform binaries on a single Ubuntu runner via Bun, generates `checksums.txt`, and attaches everything to the matching GitHub Release.
 
 ## License
 
