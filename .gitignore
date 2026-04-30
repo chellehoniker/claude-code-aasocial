@@ -1,2 +1,14 @@
 node_modules/
 *.js.map
+
+# v2.0.0+ ships per-platform binaries via GitHub Releases. The hook
+# downloads the right one into mcp-server/aa-mcp.exe at first session.
+# Neither the unified binary nor the marker/error files are tracked.
+mcp-server/aa-mcp.exe
+mcp-server/.installed-version
+mcp-server/.install-error
+mcp-server/.checksums.txt.tmp
+
+# The pre-2.0 bundled JS dist is also no longer tracked — bun --compile
+# produces native binaries that don't need a JS bundle.
+mcp-server/dist/

@@ -2,8 +2,7 @@
   "mcpServers": {
     "author-automations": {
       "type": "stdio",
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/dist/index.js"]
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server/aa-mcp.exe"
     }
   }
 }

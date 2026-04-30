@@ -1,0 +1,74 @@
+name: Release binaries
+
+# Triggered by pushing a tag like v2.0.0. Compiles per-platform binaries
+# with Bun and attaches them to the matching GitHub Release. The Cowork
+# plugin's SessionStart hook downloads the right binary on first run.
+#
+# Why a single job, not a matrix per OS:
+# Bun's --compile supports cross-target builds, so we can produce all four
+# binaries from a single Linux runner. Faster, cheaper, and the binaries
+# are byte-identical regardless of which OS does the cross-compile.
+#
+# Security note: this workflow only references trusted built-in contexts
+# (no event payload data, no commit messages, no PR titles). Bash variables
+# inside run blocks are local loop indices set in the same step.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write  # needed to attach release assets
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cross-compile binaries
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for target in bun-darwin-arm64 bun-darwin-x64 bun-windows-x64 bun-linux-x64; do
+            outname="aa-mcp-${target#bun-}"
+            # Windows binaries need the .exe suffix for OS-level execution
+            case "$target" in
+              *windows*) outname="${outname}.exe" ;;
+            esac
+            echo "▶ Building $target → dist/$outname"
+            bun build --compile --target="$target" mcp-server/index.ts --outfile "dist/$outname"
+          done
+          ls -lh dist/
+
+      - name: Generate checksums
+        # The hook fetches checksums.txt and verifies each binary against
+        # its line. Format: `<sha256>  <filename>` (two spaces, sha256sum
+        # default). We use shasum here for portability across runners.
+        run: |
+          set -euo pipefail
+          cd dist
+          shasum -a 256 aa-mcp-* > checksums.txt
+          cat checksums.txt
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/aa-mcp-darwin-arm64
+            dist/aa-mcp-darwin-x64
+            dist/aa-mcp-windows-x64.exe
+            dist/aa-mcp-linux-x64
+            dist/checksums.txt
+          generate_release_notes: true
+          # Mark as draft FALSE so the SessionStart hook can fetch the
+          # assets immediately. Tags are pushed manually after the
+          # corresponding marketplace.json bump is ready.
+          draft: false
